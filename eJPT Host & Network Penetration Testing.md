@@ -1182,6 +1182,39 @@ net localgroup
 net localgroup administrators
 ```
 
+**Enumerating Network Information - Windows**
+Current IP address & network adapter, internal networks, TCP/UDP services running and their respective ports, other hosts on the network, routing table, Windows Firewall state.
+```
+shell
+ipconfig
+ipconfig /all
+route print
+arp -a
+netstat -ano
+netsh firewall show state
+netsh advfirewall firewall
+netsh advfirewall show allprofiles
+```
+
+**Enumerating Processes & Services**
+Running processes & services, scheduled tasks. Process is an instance of a running executable or program, service is a process which runs in the background and does not interact with the desktop.
+```
+ps
+pgrep explorer.exe
+migrate <pid>
+getuid
+sysinfo
+pgrep hfs.exe
+
+shell
+net start
+wmic service list brief
+tasklist /SVC (important command)
+schtasks /query /fo LIST (copy and paste results for later)
+schtasks /query /fo LIST /v (verbose)
+```
+
+**Automating Windows Local Enumeration**
 
 
 
